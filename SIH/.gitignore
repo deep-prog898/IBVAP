@@ -1,0 +1,8 @@
+.venv/
+.venv_old/
+runs/
+.vscode/
+*.pt
+*.mp4
+*.exe
+*.db

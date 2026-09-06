@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Border Surveillance Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { background-color: #1e293b; border-radius: 0.5rem; padding: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .blink { animation: blinker 1.5s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+    </style>
+</head>
+<body class="p-6">
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center space-x-3">
+            <svg class="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.35-.166-1.998A11.954 11.954 0 0110 1.944z" clip-rule="evenodd"></path></svg>
+            <h1 class="text-2xl font-bold">Border Surveillance System <span class="text-sm bg-blue-900 text-blue-200 px-2 py-1 rounded ml-2">SIH Production Prototype</span></h1>
+        </div>
+        <div class="text-sm text-slate-400">
+            Signed in as <strong class="text-white">admin</strong> | <span class="text-blue-400 cursor-pointer">Security</span> | <span class="text-red-400 cursor-pointer">Logout</span>
+        </div>
+    </div>
+
+    <!-- Top Stats Row -->
+    <div class="grid grid-cols-5 gap-4 mb-6">
+        <div class="card border-l-4 border-yellow-500">
+            <div class="text-xs text-slate-400 font-bold uppercase">Camera Stream</div>
+            <div class="text-xl font-bold text-yellow-500 mt-1">LIVE</div>
+        </div>
+        <div class="card border-l-4 border-emerald-500">
+            <div class="text-xs text-slate-400 font-bold uppercase">Active Tracks</div>
+            <div class="text-2xl font-bold text-emerald-400 mt-1" id="val-tracks">0</div>
+        </div>
+        <div class="card border-l-4 border-blue-500">
+            <div class="text-xs text-slate-400 font-bold uppercase">Total Incidents</div>
+            <div class="text-2xl font-bold text-blue-400 mt-1" id="val-incidents">0</div>
+        </div>
+        <div class="card border-l-4 border-emerald-500">
+            <div class="text-xs text-slate-400 font-bold uppercase">System Health</div>
+            <div class="text-xl font-bold text-emerald-400 mt-1">ONLINE</div>
+        </div>
+        <div class="card border-l-4 border-slate-500">
+            <div class="text-xs text-slate-400 font-bold uppercase">Detection Model</div>
+            <div class="text-xl font-bold text-slate-200 mt-1" id="val-model">yolo11n.pt</div>
+        </div>
+    </div>
+
+    <!-- Middle Video & Alert Row -->
+    <div class="grid grid-cols-3 gap-6 mb-6">
+        
+        <!-- Video Feed -->
+        <div class="col-span-2 card p-4">
+            <div class="flex justify-between mb-3">
+                <h2 class="font-bold">Live Surveillance Feed</h2>
+                <span class="text-xs text-slate-400">Restricted zone is active</span>
+            </div>
+            <div class="bg-black rounded overflow-hidden relative">
+                <img src="/video_feed" alt="Live Video Feed" class="w-full h-auto" />
+            </div>
+        </div>
+
+        <!-- Alert Panel -->
+        <div class="col-span-1 card p-4 flex flex-col">
+            <h2 class="font-bold mb-4">Active Intrusion Alert</h2>
+            
+            <div id="alert-panel" class="bg-slate-900 border border-slate-700 rounded p-4 flex-grow flex flex-col justify-center text-center opacity-50">
+                <div class="text-slate-500 mb-2">No Active Intrusions</div>
+                <div class="text-sm text-slate-600">System Monitoring Secure Zone</div>
+            </div>
+
+            <!-- Active Alert UI (Hidden by default) -->
+            <div id="alert-panel-active" class="hidden bg-[#3f1d1d] border border-red-500 rounded p-4 flex-grow flex flex-col">
+                <h3 class="text-red-400 font-bold flex items-center blink mb-4">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                    PERIMETER INTRUSION IN PROGRESS
+                </h3>
+                
+                <div class="grid grid-cols-2 gap-4 text-sm mt-2">
+                    <div>
+                        <div class="text-slate-400">Object Type</div>
+                        <div class="font-bold text-white uppercase" id="alert-obj">PERSON</div>
+                    </div>
+                    <div>
+                        <div class="text-slate-400">Track ID</div>
+                        <div class="font-bold text-white" id="alert-id">#0</div>
+                    </div>
+                    <div>
+                        <div class="text-slate-400">Confidence</div>
+                        <div class="font-bold text-white" id="alert-conf">0%</div>
+                    </div>
+                    <div>
+                        <div class="text-slate-400">Operator Status</div>
+                        <div class="font-bold bg-orange-600 px-2 py-1 rounded inline-block text-xs mt-1">ONGOING</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Logs Table -->
+    <div class="card">
+        <h2 class="font-bold mb-4">Recent Incidents Log</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="text-xs text-slate-400 uppercase bg-slate-900">
+                    <tr>
+                        <th class="px-4 py-3 rounded-tl">Time</th>
+                        <th class="px-4 py-3">Incident</th>
+                        <th class="px-4 py-3">Object</th>
+                        <th class="px-4 py-3">Confidence</th>
+                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3 rounded-tr text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="logs-body">
+                    <!-- Logs injected via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Fetch state every 1 second
+        setInterval(() => {
+            fetch('/api/state')
+                .then(res => res.json())
+                .then(data => {
+                    // Update stats
+                    document.getElementById('val-tracks').innerText = data.active_tracks;
+                    document.getElementById('val-incidents').innerText = data.total_incidents;
+                    document.getElementById('val-model').innerText = data.model;
+
+                    // Update Alert Panel
+                    const alertPanel = document.getElementById('alert-panel');
+                    const alertPanelActive = document.getElementById('alert-panel-active');
+                    
+                    if (data.recent_alert) {
+                        alertPanel.classList.add('hidden');
+                        alertPanelActive.classList.remove('hidden');
+                        document.getElementById('alert-obj').innerText = data.recent_alert.class_name;
+                        document.getElementById('alert-id').innerText = '#' + data.recent_alert.track_id;
+                        document.getElementById('alert-conf').innerText = Math.round(data.recent_alert.confidence * 100) + '%';
+                    } else {
+                        alertPanel.classList.remove('hidden');
+                        alertPanelActive.classList.add('hidden');
+                    }
+
+                    // Update Table
+                    const tbody = document.getElementById('logs-body');
+                    tbody.innerHTML = '';
+                    data.logs.forEach(log => {
+                        tbody.innerHTML += `
+                            <tr class="border-b border-slate-700 hover:bg-slate-700/50">
+                                <td class="px-4 py-3 text-slate-300">${log.time}</td>
+                                <td class="px-4 py-3 font-medium text-white">${log.incident}</td>
+                                <td class="px-4 py-3 uppercase">${log.object}</td>
+                                <td class="px-4 py-3">${log.confidence}%</td>
+                                <td class="px-4 py-3">
+                                    <span class="bg-emerald-900/50 text-emerald-400 px-2 py-1 rounded text-xs border border-emerald-800">VALID</span>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <button class="bg-slate-600 hover:bg-slate-500 text-white px-2 py-1 rounded text-xs mr-1">Snapshot</button>
+                                    <button class="bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded text-xs">Mark False</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                })
+                .catch(err => console.error("Error fetching state:", err));
+        }, 1000);
+    </script>
+</body>
+</html>
