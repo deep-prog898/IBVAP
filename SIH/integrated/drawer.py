@@ -20,7 +20,8 @@ class Drawer:
             is_intruder = obj["status"] == "inside"
             color = (0, 0, 255) if is_intruder else (0, 255, 0)
             status_text = "INTRUDER" if is_intruder else "SAFE"
-            label = f"{status_text} {obj.get('class_name', 'OBJ').upper()} ID:{obj['track_id']} {obj['confidence']:.2f}"
+            obj_desc = obj.get("display_label", f"{obj.get('class_name', 'OBJ').upper()} ID:{obj['track_id']}")
+            label = f"{status_text} {obj_desc} {obj['confidence']:.2f}"
             
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
             cv2.circle(frame, obj["foot_point"], 5, (0, 255, 255), -1)

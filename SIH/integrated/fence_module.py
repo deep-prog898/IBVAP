@@ -18,6 +18,8 @@ class FenceModule:
 
     def _init_db(self):
         conn = sqlite3.connect(self.db_name)
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=5000;")
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS trespass_logs (
@@ -29,36 +31,49 @@ class FenceModule:
                 centroid_x INTEGER NOT NULL,
                 centroid_y INTEGER NOT NULL,
                 status TEXT NOT NULL,
-                evidence_image TEXT
+                evidence_image TEXT,
+                incident_type TEXT DEFAULT 'Perimeter Intrusion'
             )
         """)
+        # Ensure incident_type column exists for backwards-compatibility with existing DBs
+        cursor.execute("PRAGMA table_info(trespass_logs)")
+        cols = [c[1] for c in cursor.fetchall()]
+        if "incident_type" not in cols:
+            cursor.execute("ALTER TABLE trespass_logs ADD COLUMN incident_type TEXT DEFAULT 'Perimeter Intrusion'")
+            
         conn.commit()
         conn.close()
 
-    def _log_to_db(self, person_id, confidence, centroid, status, evidence_image=None):
+    def _log_to_db(self, person_id, label, confidence, centroid, status="VALID", evidence_image=None, incident_type="Perimeter Intrusion"):
         conn = sqlite3.connect(self.db_name)
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=5000;")
         cursor = conn.cursor()
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute(
             """
             INSERT INTO trespass_logs
-            (timestamp, person_id, person_label, confidence, centroid_x, centroid_y, status, evidence_image)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (timestamp, person_id, person_label, confidence, centroid_x, centroid_y, status, evidence_image, incident_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (current_time, int(person_id), f"Person_{person_id}", float(confidence), 
-             int(centroid[0]), int(centroid[1]), status, evidence_image)
+            (current_time, int(person_id), str(label), float(confidence), 
+             int(centroid[0]), int(centroid[1]), status, evidence_image, incident_type)
         )
         conn.commit()
         conn.close()
 
-    def _save_evidence(self, frame, person_id):
+    def _save_evidence(self, frame, person_id, class_name="person"):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"intrusion_person_{person_id}_{timestamp}.jpg"
+        clean_class = str(class_name).lower().replace(" ", "_")
+        filename = f"intrusion_{clean_class}_{person_id}_{timestamp}.jpg"
         filepath = os.path.join(self.evidence_dir, filename)
         success = cv2.imwrite(filepath, frame)
         return filepath if success else None
 
-    def process_detections(self, frame, detections):
+    def process_detections(self, frame, detections, vehicle_plates=None):
+        if vehicle_plates is None:
+            vehicle_plates = {}
+
         outside_count = 0
         inside_count = 0
         
@@ -79,24 +94,34 @@ class FenceModule:
             
             previous_state = self.person_states.get(track_id, None)
 
+            class_name = det.get("class_name", "person").lower()
+            plate_info = vehicle_plates.get(track_id)
+            if plate_info and plate_info.get("plate"):
+                display_label = f"{class_name.upper()} #{track_id} [{plate_info['plate']}]"
+            elif class_name in ["car", "motorcycle", "bus", "truck"]:
+                display_label = f"{class_name.upper()} #{track_id}"
+            else:
+                display_label = f"PERSON #{track_id}"
+
             if is_inside:
                 outside_count += 1
                 status = "inside"
                 if previous_state != "inside":
-                    print(f"[ALERT] {det['class_name'].upper()} {track_id} entered the RESTRICTED ZONE!")
-                    evidence_path = self._save_evidence(frame, track_id)
-                    self._log_to_db(track_id, det["confidence"], foot_point, "Intrusion", evidence_path)
+                    print(f"[ALERT] {display_label} entered the RESTRICTED ZONE!")
+                    evidence_path = self._save_evidence(frame, track_id, class_name)
+                    self._log_to_db(track_id, display_label, det["confidence"], foot_point, "VALID", evidence_path, "Perimeter Intrusion")
             else:
                 inside_count += 1
                 status = "outside"
                 if previous_state == "inside":
-                    print(f"[INFO] {det['class_name'].upper()} {track_id} left the restricted zone.")
+                    print(f"[INFO] {display_label} left the restricted zone.")
 
             self.person_states[track_id] = status
             
             results.append({
                 "track_id": track_id,
                 "class_name": det["class_name"],
+                "display_label": display_label,
                 "bbox": det["bbox"],
                 "confidence": det["confidence"],
                 "status": status,
@@ -108,3 +133,4 @@ class FenceModule:
             "inside_count": inside_count,
             "person_results": results
         }
+

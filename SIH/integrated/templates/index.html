@@ -104,14 +104,17 @@
 
     <!-- Logs Table -->
     <div class="card">
-        <h2 class="font-bold mb-4">Recent Incidents Log</h2>
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="font-bold text-lg">Recent Incidents & ANPR Logs</h2>
+            <span class="text-xs text-slate-400">Auto-refreshing live telemetry</span>
+        </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm text-left">
-                <thead class="text-xs text-slate-400 uppercase bg-slate-900">
+                <thead class="text-xs text-slate-400 uppercase bg-slate-900/80">
                     <tr>
                         <th class="px-4 py-3 rounded-tl">Time</th>
                         <th class="px-4 py-3">Incident</th>
-                        <th class="px-4 py-3">Object</th>
+                        <th class="px-4 py-3">Object / Vehicle Info</th>
                         <th class="px-4 py-3">Confidence</th>
                         <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3 rounded-tr text-right">Actions</th>
@@ -124,9 +127,210 @@
         </div>
     </div>
 
+    <!-- Evidence Snapshot Modal -->
+    <div id="snapshot-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden transition-opacity duration-200">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-2xl w-full mx-4 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center px-5 py-4 border-b border-slate-800 bg-slate-800/60">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <h3 class="font-bold text-white text-lg">Incident Evidence Snapshot</h3>
+                    <span id="modal-incident-badge" class="ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-blue-900/60 text-blue-300 border border-blue-700">INTRUSION</span>
+                </div>
+                <button onclick="closeSnapshotModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="p-5">
+                <!-- Image Container -->
+                <div class="relative bg-black rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center min-h-[280px] max-h-[460px]">
+                    <img id="modal-image" src="" alt="Evidence Snapshot" class="w-full h-auto max-h-[460px] object-contain" />
+                    <div id="modal-image-placeholder" class="hidden flex flex-col items-center justify-center text-slate-500 py-16">
+                        <svg class="w-12 h-12 mb-2 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span>Snapshot image file not found on disk</span>
+                    </div>
+                </div>
+                
+                <!-- Metadata Summary -->
+                <div class="grid grid-cols-4 gap-3 mt-4 bg-slate-800/50 p-3 rounded-lg border border-slate-800 text-xs">
+                    <div>
+                        <div class="text-slate-400 uppercase font-semibold">Object Detected</div>
+                        <div id="modal-object" class="text-white font-bold text-sm mt-0.5 uppercase truncate">--</div>
+                    </div>
+                    <div>
+                        <div class="text-slate-400 uppercase font-semibold">Captured Time</div>
+                        <div id="modal-time" class="text-slate-200 mt-0.5 truncate">--</div>
+                    </div>
+                    <div>
+                        <div class="text-slate-400 uppercase font-semibold">Confidence</div>
+                        <div id="modal-conf" class="text-emerald-400 font-bold mt-0.5">--</div>
+                    </div>
+                    <div>
+                        <div class="text-slate-400 uppercase font-semibold">Status</div>
+                        <div id="modal-status-badge" class="mt-0.5">--</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="flex justify-between items-center px-5 py-3 border-t border-slate-800 bg-slate-800/40">
+                <a id="modal-open-link" href="#" target="_blank" class="text-xs text-blue-400 hover:text-blue-300 flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    Open Full Resolution
+                </a>
+                <div class="flex space-x-2">
+                    <button id="modal-status-btn" onclick="" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+                        Mark False Alarm
+                    </button>
+                    <button onclick="closeSnapshotModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-20 opacity-0 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-lg shadow-xl flex items-center space-x-3 text-sm">
+        <span id="toast-icon">ℹ️</span>
+        <span id="toast-message">Notification</span>
+    </div>
+
     <script>
-        // Fetch state every 1 second
-        setInterval(() => {
+        let currentModalIncident = null;
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+            
+            toastMsg.innerText = message;
+            toastIcon.innerText = isError ? '⚠️' : '✅';
+            toast.className = `fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-0 opacity-100 ${isError ? 'bg-rose-900 border border-rose-700' : 'bg-slate-800 border border-slate-700'} text-white px-4 py-3 rounded-lg shadow-xl flex items-center space-x-3 text-sm`;
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function formatObjectDisplay(rawObject) {
+            if (!rawObject) return 'UNKNOWN';
+            // Highlight bracketed license plate e.g. CAR #5 [DL 3C AB 1234]
+            const match = rawObject.match(/^(.*?)\[(.*?)\]$/);
+            if (match) {
+                const vehiclePart = match[1].trim();
+                const platePart = match[2].trim();
+                return `<span>${vehiclePart}</span> <span class="bg-amber-900/60 text-amber-300 font-mono text-xs px-2 py-0.5 rounded border border-amber-700 font-bold ml-1">${platePart}</span>`;
+            }
+            return rawObject;
+        }
+
+        function openSnapshotModal(evidenceUrl, objectName, time, confidence, incident, id, status) {
+            currentModalIncident = { id, status, evidenceUrl, objectName, time, confidence, incident };
+            
+            const modal = document.getElementById('snapshot-modal');
+            const img = document.getElementById('modal-image');
+            const placeholder = document.getElementById('modal-image-placeholder');
+            const openLink = document.getElementById('modal-open-link');
+            const badge = document.getElementById('modal-incident-badge');
+            
+            badge.innerText = (incident || 'Perimeter Intrusion').toUpperCase();
+            if ((incident || '').toLowerCase().includes('anpr')) {
+                badge.className = 'ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-purple-900/60 text-purple-300 border border-purple-700';
+            } else {
+                badge.className = 'ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-blue-900/60 text-blue-300 border border-blue-700';
+            }
+
+            document.getElementById('modal-object').innerHTML = formatObjectDisplay(objectName);
+            document.getElementById('modal-time').innerText = time;
+            document.getElementById('modal-conf').innerText = confidence + '%';
+            
+            updateModalStatusUI(status, id);
+
+            if (evidenceUrl && evidenceUrl.trim() !== '') {
+                img.src = evidenceUrl;
+                img.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                openLink.href = evidenceUrl;
+                openLink.classList.remove('hidden');
+                
+                img.onerror = () => {
+                    img.classList.add('hidden');
+                    placeholder.classList.remove('hidden');
+                    openLink.classList.add('hidden');
+                };
+            } else {
+                img.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                openLink.classList.add('hidden');
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function updateModalStatusUI(status, id) {
+            const statusBadge = document.getElementById('modal-status-badge');
+            const statusBtn = document.getElementById('modal-status-btn');
+            
+            if (status === 'FALSE_ALARM') {
+                statusBadge.innerHTML = '<span class="bg-rose-900/60 text-rose-400 px-2 py-0.5 rounded text-xs border border-rose-700 font-semibold">FALSE ALARM</span>';
+                statusBtn.innerText = 'Mark as Valid';
+                statusBtn.className = 'bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition';
+                statusBtn.onclick = () => toggleIncidentStatus(id, 'VALID');
+            } else {
+                statusBadge.innerHTML = '<span class="bg-emerald-900/60 text-emerald-400 px-2 py-0.5 rounded text-xs border border-emerald-700 font-semibold">VALID</span>';
+                statusBtn.innerText = 'Mark as False Alarm';
+                statusBtn.className = 'bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition';
+                statusBtn.onclick = () => toggleIncidentStatus(id, 'FALSE_ALARM');
+            }
+        }
+
+        function closeSnapshotModal() {
+            document.getElementById('snapshot-modal').classList.add('hidden');
+            currentModalIncident = null;
+        }
+
+        // Close modal on escape key or clicking backdrop
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeSnapshotModal();
+        });
+        document.getElementById('snapshot-modal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('snapshot-modal')) closeSnapshotModal();
+        });
+
+        function toggleIncidentStatus(incidentId, targetStatus) {
+            fetch(`/api/incidents/${incidentId}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: targetStatus })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(`Incident #${incidentId} marked as ${targetStatus === 'FALSE_ALARM' ? 'False Alarm' : 'Valid'}`);
+                    if (currentModalIncident && currentModalIncident.id === incidentId) {
+                        currentModalIncident.status = targetStatus;
+                        updateModalStatusUI(targetStatus, incidentId);
+                    }
+                    // Trigger immediate fetch
+                    fetchDashboardState();
+                } else {
+                    showToast('Failed to update incident: ' + (data.error || 'Server error'), true);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Network error updating incident', true);
+            });
+        }
+
+        function fetchDashboardState() {
             fetch('/api/state')
                 .then(res => res.json())
                 .then(data => {
@@ -153,26 +357,61 @@
                     // Update Table
                     const tbody = document.getElementById('logs-body');
                     tbody.innerHTML = '';
-                    data.logs.forEach(log => {
-                        tbody.innerHTML += `
-                            <tr class="border-b border-slate-700 hover:bg-slate-700/50">
-                                <td class="px-4 py-3 text-slate-300">${log.time}</td>
-                                <td class="px-4 py-3 font-medium text-white">${log.incident}</td>
-                                <td class="px-4 py-3 uppercase">${log.object}</td>
-                                <td class="px-4 py-3">${log.confidence}%</td>
-                                <td class="px-4 py-3">
-                                    <span class="bg-emerald-900/50 text-emerald-400 px-2 py-1 rounded text-xs border border-emerald-800">VALID</span>
+                    if (!data.logs || data.logs.length === 0) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="px-4 py-8 text-center text-slate-500">
+                                    No incident records found in database
                                 </td>
+                            </tr>
+                        `;
+                        return;
+                    }
+
+                    data.logs.forEach(log => {
+                        const isFalse = log.status === 'FALSE_ALARM';
+                        const statusBadge = isFalse 
+                            ? `<span class="bg-rose-900/60 text-rose-400 px-2.5 py-1 rounded text-xs border border-rose-800 font-semibold">FALSE ALARM</span>`
+                            : `<span class="bg-emerald-900/60 text-emerald-400 px-2.5 py-1 rounded text-xs border border-emerald-800 font-semibold">VALID</span>`;
+                        
+                        const actionBtn = isFalse
+                            ? `<button onclick="toggleIncidentStatus(${log.id}, 'VALID')" class="bg-emerald-600/90 hover:bg-emerald-500 text-white px-2.5 py-1 rounded text-xs font-medium transition shadow-sm">Mark Valid</button>`
+                            : `<button onclick="toggleIncidentStatus(${log.id}, 'FALSE_ALARM')" class="bg-rose-600/90 hover:bg-rose-500 text-white px-2.5 py-1 rounded text-xs font-medium transition shadow-sm">Mark False</button>`;
+
+                        const incidentClass = (log.incident || '').toLowerCase().includes('anpr')
+                            ? 'text-purple-300 font-semibold'
+                            : 'text-white font-medium';
+
+                        // Escape values for safe attribute passing
+                        const safeObj = (log.object || '').replace(/'/g, "\\'");
+                        const safeTime = (log.time || '').replace(/'/g, "\\'");
+                        const safeInc = (log.incident || '').replace(/'/g, "\\'");
+                        const safeUrl = (log.evidence_url || '').replace(/'/g, "\\'");
+
+                        tbody.innerHTML += `
+                            <tr class="border-b border-slate-800 hover:bg-slate-800/40 transition">
+                                <td class="px-4 py-3 text-slate-400 text-xs font-mono">${log.time}</td>
+                                <td class="px-4 py-3 ${incidentClass}">${log.incident}</td>
+                                <td class="px-4 py-3">${formatObjectDisplay(log.object)}</td>
+                                <td class="px-4 py-3 text-slate-300">${log.confidence}%</td>
+                                <td class="px-4 py-3">${statusBadge}</td>
                                 <td class="px-4 py-3 text-right">
-                                    <button class="bg-slate-600 hover:bg-slate-500 text-white px-2 py-1 rounded text-xs mr-1">Snapshot</button>
-                                    <button class="bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded text-xs">Mark False</button>
+                                    <button onclick="openSnapshotModal('${safeUrl}', '${safeObj}', '${safeTime}', '${log.confidence}', '${safeInc}', ${log.id}, '${log.status}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2.5 py-1 rounded text-xs font-medium mr-1.5 transition inline-flex items-center">
+                                        <svg class="w-3.5 h-3.5 mr-1 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        Snapshot
+                                    </button>
+                                    ${actionBtn}
                                 </td>
                             </tr>
                         `;
                     });
                 })
                 .catch(err => console.error("Error fetching state:", err));
-        }, 1000);
+        }
+
+        // Fetch state every 1 second
+        setInterval(fetchDashboardState, 1000);
+        fetchDashboardState(); // Initial fetch
     </script>
 </body>
 </html>
