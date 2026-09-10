@@ -62,15 +62,16 @@ class FenceModule:
         conn.commit()
         conn.close()
 
-    def _save_evidence(self, frame, person_id, class_name="person"):
+    def _save_evidence(self, frame, person_id, class_name="person", camera_label=""):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         clean_class = str(class_name).lower().replace(" ", "_")
-        filename = f"intrusion_{clean_class}_{person_id}_{timestamp}.jpg"
+        cam_prefix = f"{camera_label}_" if camera_label else ""
+        filename = f"intrusion_{cam_prefix}{clean_class}_{person_id}_{timestamp}.jpg"
         filepath = os.path.join(self.evidence_dir, filename)
         success = cv2.imwrite(filepath, frame)
         return filepath if success else None
 
-    def process_detections(self, frame, detections, vehicle_plates=None):
+    def process_detections(self, frame, detections, vehicle_plates=None, camera_label=""):
         if vehicle_plates is None:
             vehicle_plates = {}
 
@@ -103,12 +104,15 @@ class FenceModule:
             else:
                 display_label = f"PERSON #{track_id}"
 
+            if camera_label:
+                display_label = f"[{camera_label}] {display_label}"
+
             if is_inside:
                 outside_count += 1
                 status = "inside"
                 if previous_state != "inside":
                     print(f"[ALERT] {display_label} entered the RESTRICTED ZONE!")
-                    evidence_path = self._save_evidence(frame, track_id, class_name)
+                    evidence_path = self._save_evidence(frame, track_id, class_name, camera_label)
                     self._log_to_db(track_id, display_label, det["confidence"], foot_point, "VALID", evidence_path, "Perimeter Intrusion")
             else:
                 inside_count += 1
