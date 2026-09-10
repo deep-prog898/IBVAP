@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run Surveillance Pipeline (main.py)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/SIH/integrated/main.py",
+            "cwd": "${workspaceFolder}/SIH/integrated",
+            "python": "${workspaceFolder}/SIH/.venv/Scripts/python.exe",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Run Web Dashboard (app.py)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/SIH/integrated/app.py",
+            "cwd": "${workspaceFolder}/SIH/integrated",
+            "python": "${workspaceFolder}/SIH/.venv/Scripts/python.exe",
+            "console": "integratedTerminal"
+        }
+    ]
+}
