@@ -18,6 +18,11 @@ from anpr_module import ANPRModule
 from drawer import Drawer
 
 app = Flask(__name__)
+try:
+    from flask_cors import CORS
+    CORS(app)
+except ImportError:
+    pass
 
 # Upload configuration (allow up to 500 MB for surveillance videos)
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
@@ -807,7 +812,8 @@ if __name__ == '__main__':
     t = threading.Thread(target=processing_thread, daemon=True)
     t.start()
     
+    port = int(os.environ.get("PORT", 5000))
     print("\n" + "="*60)
-    print("🚀 DUAL-CAMERA BORDER SURVEILLANCE DASHBOARD LIVE: http://127.0.0.1:5000")
+    print(f"🚀 DUAL-CAMERA BORDER SURVEILLANCE DASHBOARD LIVE: http://0.0.0.0:{port}")
     print("="*60 + "\n")
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
