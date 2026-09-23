@@ -1,5 +1,6 @@
 streamlit
 ultralytics>=8.0.0
+lapx>=0.5.2
 opencv-python-headless>=4.7.0
 paddlepaddle==3.3.1
 paddleocr==3.7.0

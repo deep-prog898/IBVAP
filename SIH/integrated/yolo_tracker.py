@@ -7,14 +7,23 @@ class YOLOTracker:
 
     def track(self, frame):
         # We track multiple classes: 0: person, 2: car, 3: motorcycle, 5: bus, 7: truck
-        results = self.model.track(
-            frame,
-            persist=True,
-            tracker="bytetrack.yaml",
-            conf=self.confidence,
-            imgsz=320,
-            verbose=False
-        )
+        try:
+            results = self.model.track(
+                frame,
+                persist=True,
+                tracker="bytetrack.yaml",
+                conf=self.confidence,
+                imgsz=320,
+                verbose=False
+            )
+        except Exception as e:
+            # Fallback to standard detection if ByteTrack linear solver (lap/lapx) is unavailable
+            results = self.model.predict(
+                frame,
+                conf=self.confidence,
+                imgsz=320,
+                verbose=False
+            )
 
         detections = []
         if not results or results[0].boxes is None:
