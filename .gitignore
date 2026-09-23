@@ -1,0 +1,22 @@
+.vscode/
+**/__pycache__/
+**/*.pyc
+.venv/
+SIH/.venv/
+SIH/.venv_old/
+
+# Ignore large sample videos
+SIH/test4.mp4
+SIH/test5.mp4
+SIH/test7.mp4
+
+# Track required models for deployment
+*.pt
+!SIH/yolo11n.pt
+!SIH/runs/detect/train/weights/best.pt
+
+# Ignore transient uploads & evidence images
+*.db
+SIH/*.db
+SIH/integrated/uploads/*
+SIH/integrated/evidence/*

@@ -83,6 +83,10 @@ class VideoStream:
                 self.cap.grab()
                 
         ret, frame = self.cap.read()
+        if not ret and self.is_live and self.cap:
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            ret, frame = self.cap.read()
+
         if ret and frame is not None and (frame.shape[1] != self.width or frame.shape[0] != self.height):
             frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
         return ret, frame
